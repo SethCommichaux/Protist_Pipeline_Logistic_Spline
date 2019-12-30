@@ -1,0 +1,170 @@
+import os
+import math
+import argparse
+
+# function transforms the start position of the read mapped to the marker gene
+# to the start position in the MSA of the taxonomic group for the marker gene
+def adjust_start(start,gaps): 
+	for gap_start,gap_len in zip(*gaps):
+		if start >= gap_start:
+			start += gap_len
+	return start
+
+# function takes the coefficients of the spline polynomial and logistic regression
+# models, as well as the classification power of the given region, and returns the
+# probability that the aligned read comes from that taxonomic group, as well as the
+# classification power of the region
+def classify(dist_from_knot,qslope,A,B,C,D,LR_slope,LR_y_int,Classification_power):
+	if LR_slope <= 0:
+		return 0,Classification_power
+	decision_threshold = ((A*dist_from_knot)**3)+((B*dist_from_knot)**2)+(C*dist_from_knot)+D
+	if LR_slope == 'NA':
+		if qslope >= decision_threshold:
+			return 1,Classification_power
+		else:
+			return 0,Classification_power
+	else:
+		dist_from_threshold_boundary = qslope - decision_threshold
+		probability = 1/(1+(math.exp(-1*(LR_y_int+LR_slope*dist_from_threshold_boundary))))
+		return probability,Classification_power
+
+# returns the lowest common ancestor of a list of NCBI taxonomic lineages
+def LCA(lineages):
+	lineages = map(lambda x: x.split(';'),lineages)
+	new_lineage = []
+	for i in zip(*lineages):
+		if len(set(i)) == 1:
+			if i != '':
+				new_lineage.append(i[0].strip())
+			else:
+				return new_lineage
+		else:
+			return new_lineage
+	return new_lineage
+
+# parse user input argumets
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", help="diamond output file")
+parser.add_argument("-f", help="euk functions file")
+parser.add_argument("-s", help="slopes file for marker genes")
+parser.add_argument("-i", help="msa indices file for marker genes")
+parser.add_argument("-no", help="ncbi nodes file")
+parser.add_argument("-na", help="ncbi names file")
+parser.add_argument("-th", help="Probability cutoff for reporting results")
+args = parser.parse_args()
+
+nodes = {i.strip().split('\t')[0]:i.strip().split('\t')[1] for i in open(args.no)}
+names = {i.strip().split('\t')[1].upper():i.strip().split('\t')[0] for i in open(args.na)}
+uniref2lineage = {i.strip().split('\t')[0]:i.strip().split('\t')[3].upper() for i in open(args.f)}
+
+print "Extracted taxonomy information!!!"
+
+marker_gene_groups_2_uniref = {}
+marker_gene_indices = {}
+
+for i in open(args.i):
+	tmp = i.strip().split('\t')
+	uniref = tmp[0]
+	F_name = tmp[1]
+	F_gap_starts = map(int,tmp[2].split(','))
+	F_gap_lens = map(int,tmp[3].split(','))
+	G_name = tmp[4]
+	G_gap_starts = map(int,tmp[5].split(','))
+	G_gap_lens = map(int,tmp[6].split(','))
+	S_name = tmp[7]
+	S_gap_starts = map(int,tmp[8].split(','))
+	S_gap_lens = map(int,tmp[9].split(','))
+	marker_gene_groups_2_uniref[F_name] = uniref
+	marker_gene_groups_2_uniref[G_name] = uniref
+	marker_gene_groups_2_uniref[S_name] = uniref
+	marker_gene_indices[F_name] = [F_gap_starts,F_gap_lens]
+	marker_gene_indices[G_name] = [G_gap_starts,G_gap_lens]
+	marker_gene_indices[S_name] = [S_gap_starts,S_gap_lens]
+
+print "Extracted MSA groups and coordinates!!!"
+
+classifiers = {i.strip().split('\t')[1]:{} for i in open(args.d)}
+
+print "Number of candidate marker genes found in sample: ",len(classifiers)
+
+# format of slopes file
+# Marker_gene_group     Knots   A       B       C       D       LR_slopes       LR_y_ints       Classification_power
+for h,i in enumerate(open(args.s)):
+	if h == 0: continue
+	tmp = i.strip().split('\t')
+	marker_gene_group = tmp[0]
+	knots = map(float,tmp[1].split(','))
+	A = map(float,tmp[2].split(','))
+	B = map(float,tmp[3].split(','))
+	C = map(float,tmp[4].split(','))
+	D = map(float,tmp[5].split(','))
+	LR_slopes = [float(i) if i != 'NA' else 'NA' for i in tmp[6].split(',')]
+	LR_y_ints = [float(i) if i != 'NA' else 'NA' for i in tmp[7].split(',')]
+	Classification_power = map(float,tmp[8].split(','))
+	if marker_gene_group not in marker_gene_groups_2_uniref: continue
+	if marker_gene_groups_2_uniref[marker_gene_group] in classifiers:
+		classifiers[marker_gene_groups_2_uniref[marker_gene_group]][marker_gene_group] = [knots,A,B,C,D,LR_slopes,LR_y_ints,Classification_power]
+
+print "Extracted marker gene classifiers!!!"
+
+
+with open('reads_classified.txt','w') as out:
+	for i in open(args.d):
+		tmp = i.strip().split('\t')
+		query = tmp[0]
+		uniref = tmp[1]
+		if classifiers[uniref] == {}: continue
+		aln_len = int(tmp[3])
+		qstart = int(tmp[8])
+		bitscore = float(tmp[11])
+		qslope = bitscore/aln_len
+		for marker_gene_group,v in classifiers[uniref].items():
+			gaps = marker_gene_indices[marker_gene_group]
+			adjusted_start = adjust_start(qstart,gaps)
+			for knot,A,B,C,D,LR_slope,LR_y_int,Classification_power in zip(*v):
+				if adjusted_start - knot <= 10:
+					dist_from_knot = knot - adjusted_start
+					probability,classification_power_of_region = classify(dist_from_knot,qslope,A,B,C,D,LR_slope,LR_y_int,Classification_power)
+					out.write(query+'\t'+uniref+'\t'+marker_gene_group+'\t'+str(probability)+'\t'+str(classification_power_of_region)+'\n')
+					break
+
+
+print "Finished classifying individual reads!!! Aggregating results..."
+
+taxa_counts = {}
+best_probs = {}
+
+with open('Taxonomic_report.txt','w') as out:
+	for i in open('reads_classified.txt'):
+		tmp = i.strip().split('\t')
+		query = tmp[0]
+		uniref = tmp[1]
+		taxa = ' '.join(tmp[2].split('_')[1:])
+		lineage = uniref2lineage[uniref]
+		lineage_trimmed = lineage[:lineage.find(taxa)+len(taxa)]+';'
+		r_prob = float(tmp[3])
+		if r_prob >= (float(args.th)):
+			if query not in best_probs:
+				best_probs[query] = {r_prob:[lineage_trimmed]}
+			elif r_prob > best_probs[query].keys()[0]:
+				best_probs[query] = {r_prob:[lineage_trimmed]}
+			elif r_prob == best_probs[query].keys()[0]:
+				best_probs[query][r_prob].append(lineage_trimmed)
+	for query,v in best_probs.items():
+		for prob,lines in v.items():
+			if len(lines) > 1:
+				lca = LCA(lines)
+			else:
+				lca = map(lambda x:x.strip(),lines[0].split(';'))[:-1]
+			if lca == []: continue
+			line = ''
+			for i in lca:
+				line += i+';'
+				if line not in taxa_counts:
+					taxa_counts[line] = prob
+				else:
+					taxa_counts[line] += prob
+	for k,v in sorted(taxa_counts.items()):
+		out.write(k+'\t'+str(v)+'\n')
+
+print "Taxonomic report has successfully been written!!! Analysis completed successfully!"
