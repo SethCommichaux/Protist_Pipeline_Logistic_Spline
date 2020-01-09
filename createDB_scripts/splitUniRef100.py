@@ -7,8 +7,10 @@ from Bio import SeqIO
 import random
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-g", help="Path to UniRef100 protein fasta file")
+parser.add_argument("-g", help="Path to UniRef format protein fasta file")
 parser.add_argument("-t", help="path to NCBI fullnamelineage.dmp taxonomy file")
+parser.add_argument("-no", help="path to nodes taxonomy file")
+parser.add_argument("-na", help="path to names taxonomy file")
 args = parser.parse_args()
 
 
@@ -24,6 +26,8 @@ def build_taxa_dict():
 	print "Taxa dictionary built!!!"
 	return taxaID2_Name_Lineage
 
+nodes = {i.strip().split('\t')[0]:i.strip().split('\t')[1] for i in open(args.no) if i.strip().split('\t')[1] in ['family','genus','species']}
+names = {i.strip().split('\t')[1].upper():i.strip().split('\t')[0] for i in open(args.na) if i.strip().split('\t')[0] in nodes}
 taxaID2_Name_Lineage = build_taxa_dict()
 
 
@@ -34,6 +38,12 @@ with open('protist.pep','w') as out, open('fungi.pep','w') as out2, open('non_eu
 		taxaID = d.split('TaxID=')[1].split(' ')[0]
 		if taxaID not in taxaID2_Name_Lineage: continue
 		lineage = taxaID2_Name_Lineage[taxaID]
+		use = False
+		for group in lineage.split(';'):
+			if group.strip() in names:
+				use = True
+				break
+		if use == False: continue
 		if 'EUKARYOTA' in lineage:
 			if 'FUNGI' in lineage: out2.write(">"+d+"\n"+s+"\n")
 			elif 'METAZOA' in lineage: out3.write(">"+d+"\n"+s+"\n")

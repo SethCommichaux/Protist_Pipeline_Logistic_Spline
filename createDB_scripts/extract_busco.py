@@ -17,12 +17,17 @@ busco_candidates = {}
 
 for i in open(args.b):
 	tmp = i.strip().split('\t')
+	if len(tmp) < 2: 
+		print tmp
+		continue
 	busco = tmp[0]
 	uniref = tmp[1]
+	prot_len = id2seq_len.get(uniref,0)
+	if prot_len == 0: continue
 	if busco not in busco_candidates:
-		busco_candidates[busco] = {uniref:id2seq_len.get(uniref,0)}
+		busco_candidates[busco] = {uniref:prot_len}
 	else:
-		busco_candidates[busco][uniref] = id2seq_len.get(uniref,0)
+		busco_candidates[busco][uniref] = prot_len
 
 print "Finished processing kaiju output file!!!"
 

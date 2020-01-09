@@ -17,6 +17,13 @@ names = {i.strip().split('\t')[1].upper():i.strip().split('\t')[0] for i in open
 
 print "Built dictionaries successfully!!!"
 
+
+''' Structure of busco2busco mapping file
+EOG09371431     EOG092C5OAL     EPrGT00050000006094
+EOG09370FKI
+EOG093709HP
+EOG09370QCX     EOG092C51AW
+'''
 b2b = {}
 
 for i in open(args.b2b):
