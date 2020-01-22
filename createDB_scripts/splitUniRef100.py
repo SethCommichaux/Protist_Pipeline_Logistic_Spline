@@ -31,7 +31,7 @@ names = {i.strip().split('\t')[1].upper():i.strip().split('\t')[0] for i in open
 taxaID2_Name_Lineage = build_taxa_dict()
 
 
-with open('protist.pep','w') as out, open('fungi.pep','w') as out2, open('non_eukaryota.pep','w') as out3:
+with open('eukaryota.pep','w') as out1, open('non_eukaryota.pep','w') as out2:
 	for i in SeqIO.parse(args.g,'fasta'):
 		d = str(i.description)
 		s = str(i.seq)
@@ -45,13 +45,13 @@ with open('protist.pep','w') as out, open('fungi.pep','w') as out2, open('non_eu
 				break
 		if use == False: continue
 		if 'EUKARYOTA' in lineage:
-			if 'FUNGI' in lineage: out2.write(">"+d+"\n"+s+"\n")
-			elif 'METAZOA' in lineage: out3.write(">"+d+"\n"+s+"\n")
-			elif 'EMBRYOPHYTA' in lineage: out3.write(">"+d+"\n"+s+"\n")
+			if 'FUNGI' in lineage: out1.write(">"+d+"\n"+s+"\n")
+			elif 'METAZOA' in lineage: out2.write(">"+d+"\n"+s+"\n")
+			elif 'EMBRYOPHYTA' in lineage: out2.write(">"+d+"\n"+s+"\n")
 			elif 'ENVIRONMENTAL SAMPLES' in lineage: continue
 			elif 'UNCLASSIFIED EUKARYOTES' in lineage: continue
-			else: out.write(">"+d+"\n"+s+"\n")
+			else: out1.write(">"+d+"\n"+s+"\n")
 		else:
-			out3.write(">"+d+"\n"+s+"\n")
+			out2.write(">"+d+"\n"+s+"\n")
 
 

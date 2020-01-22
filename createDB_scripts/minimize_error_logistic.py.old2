@@ -1,27 +1,24 @@
+import argparse
+import random
 import scipy.interpolate
 import numpy as np
-import argparse
 from sklearn.linear_model import LogisticRegression
-
 
 def minimize_error(positives,negatives):
 	if positives == 0: return False,"NA","NA",0 # a region with no positives has zero classification power
-	if negatives == 0: return min(positives),"NA","NA",1 # a region with no negatives has classification power of one
+	if negatives == 0: negatives = [random.choice(range(0,50)) for i in range(len(positives))]
 	pos_min = min(positives)
 	neg_max = max(negatives)
-	if pos_min > neg_max: # if min positive is greater than max negative, region has classification power of one
-		return pos_min,"NA","NA",1
-	else: # for region where positives and negatives overlap calculate logistic regression; classification power equals log reg prediction accuracy on training data
-		dt = float(pos_min+neg_max)/2.0
-		positives = [i-dt for i in positives]
-		negatives = [i-dt for i in negatives]
-		x_train = np.array(positives+negatives).reshape(-1,1)
-		y_train = np.array([1 for i in range(len(positives))]+[0 for i in range(len(negatives))])
-		LR = LogisticRegression(class_weight='balanced').fit(x_train,y_train)
-		classification_power = LR.score(x_train,y_train)
-		slope = float(LR.coef_[0][0])
-		y_int = float(LR.intercept_[0])
-		return(dt,slope,y_int,classification_power)
+	dt = float(pos_min+neg_max)/2.0
+	positives = [i-dt for i in positives]
+	negatives = [i-dt for i in negatives]
+	x_train = np.array(positives+negatives).reshape(-1,1)
+	y_train = np.array([1 for i in range(len(positives))]+[0 for i in range(len(negatives))])
+	LR = LogisticRegression(class_weight='balanced').fit(x_train,y_train)
+	classification_power = LR.score(x_train,y_train)
+	slope = float(LR.coef_[0][0])
+	y_int = float(LR.intercept_[0])
+	return(dt,slope,y_int,classification_power)
 
 
 def process_results(results):
@@ -64,7 +61,7 @@ with open(args.o,'a') as out:
 results ={}
 
 # Example of args.s file structure
-# EOG092C00SU_ACAROMYCES  1060    1.046875        NG
+# EOG092C00SU_ACAROMYCES  1060    1.046875	NG
 for i in open(args.s):
 	tmp = i.strip().split('\t')
 	if len(tmp) < 4: continue
