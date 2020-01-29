@@ -22,7 +22,7 @@ def create_dicts(names,nodes):
 		for j in lineage:
 			rank = nodes[names[j]]
 			if rank in ['family','genus','species']:
-				uniref2lineage[uniref][rank] = names[j]
+				uniref2lineage[uniref][rank] = j
 
 	print 'Built dictionaries...'
 	return uniref2lineage
@@ -80,23 +80,20 @@ r = {'species':'S','genus':'G','family':'F'}
 
 # format of diamonod output
 # neg     UniRef100_A0A1Y2HDR0    47.8    67      35      0       2       68      52      118     4.3e-14 77.8
-# UniRef100_E5A3J1_10     UniRef100_E5A3J1	100.0   70      0       0       1       70      11      80      1.5e-32 139.0
+# UniRef100_E5A3J1_10     UniRef100_E5A3J1        100.0   70      0       0       1       70      11      80      1.5e-32 139.0
 
 with open(args.o,'w') as out:
 	for i in open(args.d):
 		tmp = i.strip().split('\t')
 		query = tmp[0]
+		query_id = '_'.join(query.split(' ')[0].split('_')[:2])
 		subject = tmp[1]
 		sstart = int(tmp[8])
 		aln_len = float(tmp[3])
 		bitscore = float(tmp[11])
 		slope = bitscore/aln_len
-		if query == 'neg':
-			relation = 'N'
-		else:
-			query_id = '_'.join(query.split(' ')[0].split('_')[:2])
-			relation = get_taxa_rank(query_id,subject,r)
-		if subject in indices:
+		relation = get_taxa_rank(query_id,subject,r)
+		if subject in indices: 
 			if relation == 'S':
 				global_msa_start,taxaName = find_global_coordinates(indices[subject]['S'],sstart)
 				if taxaName != '0':
@@ -123,6 +120,7 @@ with open(args.o,'w') as out:
 					global_msa_start,taxaName = find_global_coordinates(indices[subject][j],sstart)
 					if taxaName != '0':
 						out.write(taxaName+'\t'+str(global_msa_start)+'\t'+str(slope)+'\t'+relation+j+'\n')
+
 
 
 

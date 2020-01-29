@@ -1,3 +1,4 @@
+# load the needed python libraries
 from Bio import SeqIO
 import argparse
 import os
@@ -8,26 +9,6 @@ parser.add_argument("-nodes", help="ncbi nodes.dmp file")
 parser.add_argument("-p", help="path to directory of msa's")
 parser.add_argument("-o", help="output file")
 args = parser.parse_args()
-
-def process_fasta_file(results,msa,taxa_rank,marker_gene_group_label):
-	for j in SeqIO.parse(msa,'fasta'):
-		id = str(j.id)
-		if id not in results:
-			results[id] = {'F':[[],[],0],'G':[[],[],0],'S':[[],[],0]}
-		results[id][taxa_rank][2] = marker_gene_group_label
-		c = 0
-		for g,b in enumerate(str(j.seq)):
-			if b == '-':
-				if c > 0: c+=1
-				else:
-					results[id][taxa_rank][0].append(str(g))
-					c +=1
-			else:
-				if c != 0:
-					results[id][taxa_rank][1].append(str(c))
-					c = 0
-		if c != 0: results[id][taxa_rank][1].append(str(c))
-	return results
 
 # create dictionaries for ncbi taxonomy nodes files
 # nodes = map taxid to taxonomic rank
@@ -45,10 +26,25 @@ for h,i in enumerate(os.listdir(args.p)):
 		taxa_rank = {'family':'F','genus':'G','species':'S'}.get(rank,0)
 		if taxa_rank == 0: continue
 		msa = path+'.msa'
-		if os.path.exists(msa) == False:
-			results = process_fasta_file(results,path,taxa_rank,marker_gene_group_label)
-		else:
-			results = process_fasta_file(results,msa,taxa_rank,marker_gene_group_label)
+		if os.path.exists(msa) == False: os.system('cp '+path+' '+msa)
+#		elif os.path.getsize(msa) == 0: os.system('cp '+path+' '+msa)
+		for j in SeqIO.parse(msa,'fasta'):
+			id = str(j.id)
+			if id not in results:
+				results[id] = {'F':[[],[],0],'G':[[],[],0],'S':[[],[],0]}
+			results[id][taxa_rank][2] = marker_gene_group_label
+			c = 0
+			for g,b in enumerate(str(j.seq)):
+				if b == '-':
+					if c > 0: c+=1
+					else:
+						results[id][taxa_rank][0].append(str(g))
+						c +=1
+				else:
+					if c != 0:
+						results[id][taxa_rank][1].append(str(c))
+						c = 0
+			if c != 0: results[id][taxa_rank][1].append(str(c))
 
 with open(args.o,'a') as out:
 	for uniref,v in results.items():
@@ -61,4 +57,3 @@ with open(args.o,'a') as out:
 				gap_lengths = ','.join(gaps[1])
 			out.write('\t'+str(marker_gene_group_label)+'\t'+str(gap_starts)+'\t'+str(gap_lengths))
 		out.write('\n')
-

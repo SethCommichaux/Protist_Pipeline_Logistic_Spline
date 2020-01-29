@@ -82,19 +82,19 @@ cd $data
 # mkdir taxa_groups
 # cd taxa_groups
 # mkdir singletons MSA
-# python $createDB/split_into_groups.py -b2b ../busco2busco_mappings.txt -e ../euk_busco.pep -b ../busco_marker_gene_ids.txt -f ../euk_functions.txt -no ../nodes -na ../names
+# python $createDB/split_into_groups.py -b2b $data/busco2busco_mappings.txt -e $data/euk_busco.pep -b $data/busco_marker_gene_ids.txt -f $data/euk_functions.txt -no $data/nodes -na $data/names
 # cd MSA
 # for i in *fasta; do mafft --thread 12 $i > $i.msa; done
+# mv ../singletons/* .
 # cd ../../
 
 
 # Extract the global coordinates for each marker gene in each multiple sequence alignment
 #
-# python $createDB/global_msa_coordinates.py -nodes nodes -names names -o global_msa_indices.txt -p taxa_groups/MSA/
-# python $createDB/global_msa_coordinates.py -nodes nodes -names names -o global_msa_indices.txt -p taxa_groups/singletons/
+# python $createDB/global_msa_coordinates.py -nodes nodes -o global_msa_indices.txt -p taxa_groups/MSA/
 
 
-# make marker gene database for diamond and kaiju softwares
+# make marker gene database indexes for diamond and kaiju softwares
 #
 # $diamond makedb --in euk_busco.pep --db euk_busco --threads 12
 # $kaiju/mkbwt -o euk_busco.pep.kaiju -n 12 -l 100000 euk_busco.pep
@@ -112,7 +112,9 @@ cd $data
 #
 # python $createDB/kmer_split.py -k 70 -s 10 -i negatives.pep -o negatives70_10.pep
 # python $createDB/kmer_split.py -k 70 -s 10 -i euk_busco.pep -o euk_busco70_10.pep
-# cat negatives70_10.pep euk_busco70_10.pep > all70_10.pep
+# mkdir diamond_results
+# cat negatives70_10.pep euk_busco70_10.pep > diamond_results/all70_10.pep
+# cd diamond_results
 # python $createDB/diamond_preprocess_kmers.py all70_10.pep
 # ls *fasta > fastas.txt
 

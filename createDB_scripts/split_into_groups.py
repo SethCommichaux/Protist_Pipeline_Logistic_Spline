@@ -46,26 +46,21 @@ for i in SeqIO.parse(args.e,'fasta'):
 	fgs = {'family':'','genus':'','species':''}
 	for j in lineage:
 		if nodes[names[j]] in fgs:
-			with open(busco+'_'+j.replace(' ','_').replace('/','_')+'.fasta','a') as out:
+			with open(busco+'_'+names[j]+'.fasta','a') as out:
 				out.write(">"+d+"\n"+s+"\n")
 
 
 for i in os.listdir('.'):
-	c = 0
-	for j in open(i):
-		if j[0] == ">":
-			c += 1
-	if c == 1:
-		os.system('mv '+i+' singletons/')
-	elif c > 1:
-		os.system('mv '+i+' MSA/')
+	if i.endswith('fasta'):
+		c = 0
+		for j in open(i):
+			if j[0] == ">":
+				c += 1
+		if c == 1:
+			os.system('mv '+i+' singletons/')
+		elif c > 1:
+			os.system('mv '+i+' MSA/')
 
 
 print "Finished!!!"
 
-
-
-
-
-
-## Need to remove marker genes without a least family level taxonomic rank from uniref100 
