@@ -12,11 +12,12 @@ args = parser.parse_args()
 def process_fasta_file(results,msa,taxa_rank,marker_gene_group_label):
 	for j in SeqIO.parse(msa,'fasta'):
 		id = str(j.id)
+		seq = str(j.seq)
 		if id not in results:
 			results[id] = {'F':[[],[],0],'G':[[],[],0],'S':[[],[],0]}
 		results[id][taxa_rank][2] = marker_gene_group_label
 		c = 0
-		for g,b in enumerate(str(j.seq)):
+		for g,b in enumerate(seq):
 			if b == '-':
 				if c > 0: c+=1
 				else:

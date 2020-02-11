@@ -89,9 +89,10 @@ cd $data
 # cd ../../
 
 
-# Extract the global coordinates for each marker gene in each multiple sequence alignment
+# Extract the global coordinates and lengths of each marker gene multiple sequence alignment
 #
 # python $createDB/global_msa_coordinates.py -nodes nodes -o global_msa_indices.txt -p taxa_groups/MSA/
+python $createDB/record_markger_gene_lens.py -d $data -o marker_gene_group_lens.txt -p taxa_groups/MSA/
 
 
 # make marker gene database indexes for diamond and kaiju softwares
