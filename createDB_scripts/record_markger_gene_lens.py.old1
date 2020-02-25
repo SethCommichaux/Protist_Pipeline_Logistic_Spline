@@ -27,7 +27,6 @@ for i in os.listdir(args.p):
 	path = args.p+'/'+i
 	if path.endswith('.fasta'):
 		marker_gene_group_label = i.replace('.fasta','')
-		marker_gene = marker_gene_group_label.split('_')[0]
 		taxaID = marker_gene_group_label.split('_')[1]
 		lineage = fullLineage.get(taxaID,0).split(';')
 		if lineage == 0: continue
@@ -37,18 +36,15 @@ for i in os.listdir(args.p):
 				seq_len = len(str(j.seq))
 				break
 		else:
-			for j in SeqIO.parse(path,'fasta'):
+			for j in SeqIO.parse(msa,'fasta'):
 				seq_len = len(str(j.seq))
 				break
 		for line in lineage:
 			line = line.strip()
-			line_taxaID = names[line]
-			if line_taxaID not in gene_lengths: gene_lengths[line_taxaID] = [seq_len,[marker_gene]]
-			else:
-				gene_lengths[line_taxaID][0] += seq_len
-				gene_lengths[line_taxaID][1].append(marker_gene)
-
+			line_taxaID = names[line]			
+			if line_taxaID not in gene_lengths: gene_lengths[line_taxaID] = seq_len
+			else: gene_lengths[line_taxaID] += seq_len
+	
 with open(args.o,'w') as out:
 	for k,v in gene_lengths.items():
-		out.write(k+'\t'+str(v[0])+'\t'+str(len(set(v[1])))+'\n')
-
+		out.write(k+'\t'+str(v)+'\n')
