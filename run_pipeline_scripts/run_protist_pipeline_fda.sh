@@ -74,7 +74,7 @@ time $diamond blastx --sensitive --evalue 0.0000000001 --db $queryDB --query kai
 # Process diamond output
 #
 python $run_pipeline/subset_diamond_best_bitscore.py -d kaiju.fasta.diamond -o kaiju.fasta.diamond.subset
-python $run_pipeline/classify_spline_logistic.py -d kaiju.fasta.diamond.subset -path $protist_data -th 0.9
+python $run_pipeline/classify_spline_logistic.py -d kaiju.fasta.diamond -path $protist_data -th 0.9
 
 ##############################################################################################################
 # Assemble binned reads with Trinity
